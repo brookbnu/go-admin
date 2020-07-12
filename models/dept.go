@@ -1,7 +1,8 @@
 package models
 
 import (
-	orm "go-admin/database"
+	"errors"
+	"go-admin/global/orm"
 	"go-admin/tools"
 	_ "time"
 )
@@ -117,7 +118,11 @@ func (e *Dept) GetPage(bl bool) ([]Dept, error) {
 		// 数据权限控制
 		dataPermission := new(DataPermission)
 		dataPermission.UserId, _ = tools.StringToInt(e.DataScope)
-		table = dataPermission.GetDataScope("sys_dept", table)
+		tableper, err := dataPermission.GetDataScope("sys_dept", table)
+		if err != nil {
+			return nil, err
+		}
+		table = tableper
 	}
 
 	if err := table.Order("sort").Find(&doc).Error; err != nil {
@@ -184,15 +189,28 @@ func (e *Dept) Update(id int) (update Dept, err error) {
 	}
 	e.DeptPath = deptPath
 
+	if e.DeptPath != "" && e.DeptPath != update.DeptPath {
+		return update, errors.New("上级部门不允许修改！")
+	}
+
 	//参数1:是要修改的数据
 	//参数2:是修改的数据
+
 	if err = orm.Eloquent.Table(e.TableName()).Model(&update).Updates(&e).Error; err != nil {
 		return
 	}
+
 	return
 }
 
 func (e *Dept) Delete(id int) (success bool, err error) {
+
+	user := SysUser{}
+	user.DeptId = id
+	userlist, err := user.GetList()
+	tools.HasError(err, "", 500)
+	tools.Assert(len(userlist) <= 0, "当前部门存在用户，不能删除！",500)
+
 	if err = orm.Eloquent.Table(e.TableName()).Where("dept_id = ?", id).Delete(&Dept{}).Error; err != nil {
 		success = false
 		return

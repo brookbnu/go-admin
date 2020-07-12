@@ -2,13 +2,13 @@ package models
 
 import (
 	"errors"
-	orm "go-admin/database"
+	"go-admin/global/orm"
 	"go-admin/tools"
 )
 
 type Menu struct {
 	MenuId     int    `json:"menuId" gorm:"primary_key;AUTO_INCREMENT"`
-	MenuName   string `json:"menuName" gorm:"type:varchar(11);"`
+	MenuName   string `json:"menuName" gorm:"type:varchar(128);"`
 	Title      string `json:"title" gorm:"type:varchar(64);"`
 	Icon       string `json:"icon" gorm:"type:varchar(128);"`
 	Path       string `json:"path" gorm:"type:varchar(128);"`
@@ -261,8 +261,10 @@ func (e *Menu) GetPage() (Menus []Menu, err error) {
 	// 数据权限控制
 	dataPermission := new(DataPermission)
 	dataPermission.UserId, _ = tools.StringToInt(e.DataScope)
-	table = dataPermission.GetDataScope("sys_menu", table)
-
+	table, err = dataPermission.GetDataScope("sys_menu", table)
+	if err != nil {
+		return nil, err
+	}
 	if err = table.Order("sort").Find(&Menus).Error; err != nil {
 		return
 	}

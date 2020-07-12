@@ -1,7 +1,8 @@
 package models
 
 import (
-	orm "go-admin/database"
+	"github.com/pkg/errors"
+	"go-admin/global/orm"
 	"go-admin/tools"
 )
 
@@ -51,14 +52,16 @@ func (e *SysRole) GetPage(pageSize int, pageIndex int) ([]SysRole, int, error) {
 	// 数据权限控制
 	dataPermission := new(DataPermission)
 	dataPermission.UserId, _ = tools.StringToInt(e.DataScope)
-	table = dataPermission.GetDataScope("sys_role", table)
-
+	table,err := dataPermission.GetDataScope("sys_role", table)
+	if err != nil {
+		return nil, 0, err
+	}
 	var count int
 
 	if err := table.Order("role_sort").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&doc).Error; err != nil {
 		return nil, 0, err
 	}
-	table.Count(&count)
+	table.Where("`deleted_at` IS NULL").Count(&count)
 	return doc, count, nil
 }
 
@@ -92,6 +95,7 @@ func (role *SysRole) GetList() (SysRole []SysRole, err error) {
 	return
 }
 
+// 获取角色对应的菜单ids
 func (role *SysRole) GetRoleMeunId() ([]int, error) {
 	menuIds := make([]int, 0)
 	menuList := make([]MenuIdList, 0)
@@ -106,6 +110,11 @@ func (role *SysRole) GetRoleMeunId() ([]int, error) {
 }
 
 func (role *SysRole) Insert() (id int, err error) {
+	i := 0
+	orm.Eloquent.Table("sys_role").Where("role_name=? or role_key = ?", role.RoleName, role.RoleKey).Count(&i)
+	if i > 0 {
+		return 0, errors.New("角色名称或者角色标识已经存在！")
+	}
 	role.UpdateBy = ""
 	result := orm.Eloquent.Table("sys_role").Create(&role)
 	if result.Error != nil {
@@ -138,6 +147,14 @@ func (role *SysRole) GetRoleDeptId() ([]int, error) {
 func (role *SysRole) Update(id int) (update SysRole, err error) {
 	if err = orm.Eloquent.Table("sys_role").First(&update, id).Error; err != nil {
 		return
+	}
+
+	if role.RoleName != "" && role.RoleName != update.RoleName {
+		return update, errors.New("角色名称不允许修改！")
+	}
+
+	if role.RoleKey != "" && role.RoleKey != update.RoleKey {
+		return update, errors.New("角色标识不允许修改！")
 	}
 
 	//参数1:是要修改的数据

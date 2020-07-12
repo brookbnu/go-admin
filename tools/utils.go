@@ -1,8 +1,8 @@
 package tools
 
 import (
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"strconv"
 )
 
@@ -13,7 +13,6 @@ func StrToInt(err error, index string) int {
 	}
 	return result
 }
-
 
 func CompareHashAndPassword(e string, p string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(e), []byte(p))
@@ -50,6 +49,7 @@ func HasError(err error, msg string, code ...int) {
 		if msg == "" {
 			msg = err.Error()
 		}
+		log.Println(err)
 		panic("CustomError#" + strconv.Itoa(statusCode) + "#" + msg)
 	}
 }

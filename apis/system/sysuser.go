@@ -7,7 +7,7 @@ import (
 	"go-admin/models"
 	"go-admin/tools"
 	"go-admin/tools/app"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 // @Summary 列表数据
@@ -34,7 +34,7 @@ func GetSysUserList(c *gin.Context) {
 		pageIndex = tools.StrToInt(err, index)
 	}
 
-	data.Username = c.Request.FormValue("userName")
+	data.Username = c.Request.FormValue("username")
 	data.Status = c.Request.FormValue("status")
 	data.Phone = c.Request.FormValue("phone")
 
@@ -172,7 +172,7 @@ func InsertSysUser(c *gin.Context) {
 // @Router /api/v1/sysuser/{userId} [put]
 func UpdateSysUser(c *gin.Context) {
 	var data models.SysUser
-	err := c.BindWith(&data, binding.JSON)
+	err := c.Bind(&data)
 	tools.HasError(err, "数据解析失败", -1)
 	data.UpdateBy = tools.GetUserIdStr(c)
 	result, err := data.Update(data.UserId)
